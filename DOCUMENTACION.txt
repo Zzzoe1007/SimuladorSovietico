@@ -1,0 +1,768 @@
+================================================================================
+ URSS · EXPEDIENTE VITAL
+ Documentación del proyecto
+================================================================================
+
+Simulador narrativo de una vida en la Unión Soviética (1922–1991). Es un juego
+web en español, sin instalación y sin servidor: se abre con doble clic en el
+navegador. Cada partida genera una biografía ficticia sobre un fondo histórico
+real, con decisiones, economía doméstica, crisis, una gran meta personal y un
+final en 1991 (o antes, si el personaje muere).
+
+Este documento explica qué hay en cada carpeta, qué hace cada archivo, dónde
+está el contenido editable y cómo modificar, compilar y probar el juego.
+
+Índice
+------
+  1. Cómo abrir el juego
+  2. Estructura del proyecto
+  3. Arquitectura y orden de carga
+  4. Descripción archivo por archivo
+     4.1. index.html
+     4.2. src/estilos/estilos.css
+     4.3. src/nucleo/ (datos base)
+     4.4. src/eventos/ (contenido narrativo)
+     4.5. src/motor/motor.js (reglas)
+     4.6. src/interfaz/interfaz.js (DOM)
+     4.7. build.mjs y herramientas/
+     4.8. pruebas/
+     4.9. dist/
+  5. Dónde está cada tipo de contenido
+  6. Modelo de estado
+  7. Cómo se juega
+  8. Cómo modificar el juego
+     8.1. Añadir un evento
+     8.2. Añadir un bien
+     8.3. Cambiar una meta
+     8.4. Ajustar economía o eras
+     8.5. Cambiar textos de interfaz
+  9. Compilación y pruebas
+  10. Equilibrio registrado
+  11. Criterio histórico y neutralidad
+  12. Problemas comunes
+  13. Convenios de código
+
+
+================================================================================
+ 1. CÓMO ABRIR EL JUEGO
+================================================================================
+
+Opción A — versión modular (para trabajar):
+  Abrir index.html con doble clic. También funciona con file:// porque todos
+  los scripts son clásicos (<script src="...">), no módulos ES.
+
+Opción B — versión de un solo archivo (para compartir):
+  Abrir dist/urss-expediente.html. Lleva el CSS y el JS incrustados; no
+  necesita la carpeta src/ ni conexión a internet. Es el archivo que se puede
+  enviar por correo o subir a cualquier sitio.
+
+En ambos casos:
+  · No hace falta instalar Node para jugar.
+  · Tailwind CSS y las fuentes de Google se cargan por CDN. Sin internet, el
+    juego sigue funcionando con los estilos propios de reserva.
+  · El progreso se guarda en el navegador (localStorage). No hay cuentas ni
+    servidores: cada navegador tiene sus propios expedientes.
+
+
+================================================================================
+ 2. ESTRUCTURA DEL PROYECTO
+================================================================================
+
+URSS/
+├── index.html                     Punto de entrada (markup + orden de carga)
+├── DOCUMENTACION.txt              Este archivo
+├── build.mjs                      Genera dist/urss-expediente.html
+│
+├── src/
+│   ├── nucleo/                    Datos y funciones base, sin DOM
+│   │   ├── config.js              Constantes generales
+│   │   ├── utilidades.js          clamp, rnd, pickWeighted, formato
+│   │   ├── eras.js                Los cuatro periodos históricos
+│   │   ├── bienes.js              Catálogo de posesiones (ITEMS)
+│   │   ├── economia.js            Sueldos, gastos y vivienda
+│   │   ├── metas.js               Las cuatro grandes metas (GOALS)
+│   │   ├── eventos.js             Registro EVENT_LIST + addEvents()
+│   │   └── origenes.js            Puntos de partida (ORIGINS)
+│   │
+│   ├── eventos/                   Contenido narrativo, por etapas
+│   │   ├── 01-infancia.js
+│   │   ├── 02-vida-adulta.js
+│   │   ├── 03-stalin-deshielo.js
+│   │   ├── 04-estancamiento-perestroika.js
+│   │   └── 05-crisis-metas-colapso.js
+│   │
+│   ├── motor/
+│   │   └── motor.js               Clase Game: estado, reglas, finales
+│   │
+│   ├── interfaz/
+│   │   └── interfaz.js            DOM, pantallas, guardado, descarga
+│   │
+│   └── estilos/
+│       └── estilos.css            Toda la presentación propia
+│
+├── herramientas/
+│   └── orden-carga.mjs            Lee index.html y carga el motor en Node
+│
+├── pruebas/
+│   ├── simulacion.mjs             1.200 + 1.200 partidas y validaciones
+│   ├── metas.mjs                  400 partidas por cada gran meta
+│   └── navegador.mjs              6 partidas reales en Chrome headless
+│
+└── dist/
+    └── urss-expediente.html       Archivo único autocontenido (generado)
+
+Total de contenido narrativo: 76 eventos repartidos en cinco archivos.
+
+
+================================================================================
+ 3. ARQUITECTURA Y ORDEN DE CARGA
+================================================================================
+
+El juego separa tres responsabilidades:
+
+  DATOS        src/nucleo/ y src/eventos/   Qué existe y qué se puede elegir.
+  MOTOR        src/motor/motor.js           Qué ocurre y cómo cambia el estado.
+  INTERFAZ     src/interfaz/interfaz.js     Cómo se muestra y cómo se pulsa.
+
+La interfaz nunca aplica reglas: solo llama a métodos del motor y pinta el
+estado resultante. El motor no toca el DOM: se puede probar en Node.
+
+El orden de los <script> en index.html es obligatorio, porque los archivos
+comparten variables globales (scripts clásicos, no módulos):
+
+  1. src/nucleo/config.js
+  2. src/nucleo/utilidades.js
+  3. src/nucleo/eras.js
+  4. src/nucleo/bienes.js
+  5. src/nucleo/economia.js
+  6. src/nucleo/metas.js
+  7. src/nucleo/eventos.js          define EVENT_LIST y addEvents()
+  8. src/nucleo/origenes.js
+  9. src/eventos/01-infancia.js     llaman a addEvents([...])
+ 10. src/eventos/02-vida-adulta.js
+ 11. src/eventos/03-stalin-deshielo.js
+ 12. src/eventos/04-estancamiento-perestroika.js
+ 13. src/eventos/05-crisis-metas-colapso.js
+ 14. src/motor/motor.js            usa EVENT_LIST ya completo
+ 15. src/interfaz/interfaz.js      arranca la interfaz al final
+
+Por qué scripts clásicos:
+  Los módulos ES (import/export) no funcionan al abrir un archivo local con
+  file:// en la mayoría de navegadores. Con <script src> clásicos, el juego
+  funciona sin servidor. build.mjs conserva ese mismo orden al incrustarlos.
+
+
+================================================================================
+ 4. DESCRIPCIÓN ARCHIVO POR ARCHIVO
+================================================================================
+
+--------------------------------------------------------------------------------
+ 4.1. index.html
+--------------------------------------------------------------------------------
+Es el punto de entrada y la única fuente de verdad de la estructura de la
+página y del orden de carga.
+
+Contiene:
+  · Cabecera <head>: metadatos, Tailwind por CDN, fuentes, configuración de
+    Tailwind y enlace a src/estilos/estilos.css.
+  · Pantalla de inicio (#screen-intro): nombre, sexo registrado, cohorte de
+    nacimiento (1928, 1938, 1948 o 1958), origen familiar, botones de empezar
+    y continuar, y explicación breve.
+  · Pantalla de juego (#screen-game): cabecera con nombre, año, edad, era y
+    línea temporal; columna de atributos y recursos; columna central con el
+    evento, sus opciones y el resultado; registro de vida.
+  · Pantalla final (#screen-end): titular, causa, calificación, sellos,
+    estadísticas, nota histórica y botones de reinicio/descarga.
+  · Modal de ayuda (#help-modal).
+  · Al final, los 15 <script src="..."> en el orden explicado arriba.
+
+Para añadir un archivo de eventos nuevo basta con añadir su <script> aquí, en
+la posición que le corresponda. build.mjs y las pruebas leen esta lista.
+
+--------------------------------------------------------------------------------
+ 4.2. src/estilos/estilos.css
+--------------------------------------------------------------------------------
+Toda la presentación propia: paleta de papel envejecido, tipografías de
+archivo, paneles, sellos, línea temporal, pantallas, modales, tarjetas de
+opciones, animaciones y adaptación a móvil. No contiene lógica.
+
+Tailwind (CDN) se usa directamente en las clases del HTML. Este CSS cubre lo
+que Tailwind no hace: textura, sellos, transiciones y componentes propios.
+Sin conexión, el CSS local mantiene el juego legible y usable.
+
+--------------------------------------------------------------------------------
+ 4.3. src/nucleo/ — datos base
+--------------------------------------------------------------------------------
+config.js
+  Constantes globales:
+    version       versión del formato de guardado
+    saveKey       'urss.expediente.v1' (localStorage)
+    bestKey       'urss.mejor.v1' (mejor calificación)
+    startYear     1922
+    endYear       1991
+    maxAge        100
+    baseExpenses  720 ₽ anuales de manutención base
+    apartmentPrice 3500 ₽ (precio de referencia del piso)
+  Cambiar aquí la versión invalida los guardados antiguos de forma ordenada.
+
+utilidades.js
+  Funciones pequeñas compartidas:
+    clamp(n, min, max)        limita un número a un rango
+    round(n)                  redondeo entero
+    fmtRub(n)                 formato «1.234 ₽» en español
+    rnd(state)                generador pseudoaleatorio determinista
+                              (mulberry32) a partir de state.rand
+    pickWeighted(state, list) elige un elemento según su propiedad weight
+  No toca el DOM ni conoce las reglas del juego.
+
+eras.js
+  Los cuatro periodos que enmarcan la partida:
+    stalin       1922–1953   Era de Stalin
+    thaw         1954–1964   Deshielo
+    stagnation   1965–1984   Estancamiento
+    perestroika  1985–1991   Perestroika
+  Cada era tiene id, nombre, años y color (usado en la línea temporal).
+  eraFor(year) devuelve la era de un año concreto.
+
+bienes.js
+  Catálogo ITEMS: 14 posesiones tangibles (botas, frigorífico, televisor,
+  lavadora, teléfono, dacha, Lada, apartamento, máquina de escribir,
+  biblioteca prohibida, medallas, traje, icono familiar, bicicleta).
+  Cada bien aporta un pequeño modificador anual (health, morale, blat,
+  intellect o loyalty). Se compran o se reciben mediante eventos.
+
+economia.js
+  SALARY y JOBS: sueldo y nombre del puesto según el nivel (tier 0–7).
+  incomeOf(state): ingresos anuales; suma el sueldo del cónyuge y aplica la
+    subida nominal de 1989. La pensión son 1.450 ₽.
+  expensesOf(state): manutención, vivienda, hijos, cónyuge e inflación de
+    1989 y 1991. Los menores de 18 no pagan gastos.
+  housingName(h): etiqueta legible de la vivienda (kommunalka, habitación,
+    khrushchiovka, apartamento, casa).
+
+metas.js
+  GOALS: las cuatro grandes metas elegibles a los 18 años.
+    flat   «Un techo propio»        conseguir un apartamento
+    star   «La élite protegida»     carrera de prestigio (ciencia, deporte…)
+    black  «El mercado negro»       red de tratos e influencia
+    party  «La carrera del Partido» ascenso en la nomenklatura
+  Cada meta define:
+    name / tag / desc   textos visibles
+    threshold           progreso interno necesario (el jugador ve 0–100)
+    progress(state)     cálculo del progreso según dinero, blat, espera, etc.
+    gate(state)         condición final; si devuelve texto, aún no se cierra
+    reward / done       efectos y párrafo narrativo al cumplirla
+  Los eventos cuyo id empieza por «g_» son eventos de meta y tienen peso
+  extra en la bolsa general.
+
+eventos.js
+  Registro compartido:
+    const EVENT_LIST = [];
+    function addEvents(list) { EVENT_LIST.push(...list); }
+  Los archivos de src/eventos/ llaman a addEvents([...]). El motor lee
+  EVENT_LIST para decidir qué mostrar cada año. No contiene eventos.
+
+origenes.js
+  ORIGINS: cuatro puntos de partida con atributos y rublos iniciales.
+    obrero        salud 78, intelecto 22, lealtad 35, blat 8,  moral 58,  80 ₽
+    campesino     salud 84, intelecto 15, lealtad 32, blat 16, moral 54,  30 ₽
+    intelectual   salud 70, intelecto 40, lealtad 24, blat 12, moral 60, 140 ₽
+    nomenklatura  salud 74, intelecto 34, lealtad 52, blat 26, moral 48, 420 ₽
+  Cada uno tiene label y hint (texto que aparece en la pantalla de inicio).
+
+--------------------------------------------------------------------------------
+ 4.4. src/eventos/ — contenido narrativo (76 eventos)
+--------------------------------------------------------------------------------
+Cada archivo es una capa temática. Todos los eventos usan la misma estructura:
+
+  {
+    id:        'identificador_unico',        // obligatorio
+    title:     'Título del dilema',
+    stamp:     'Oficina · año',              // sello decorativo
+    year:      1937,                         // efeméride exacta (opcional)
+    from: 1932, to: 1934,                    // o rango de años
+    minAge: 4, maxAge: 7,                    // límites de edad (opcional)
+    age: 18, milestone: true,                // hito de edad exacto (opcional)
+    once: false,                             // repetible (opcional)
+    cooldown: 3,                             // años mínimos entre repeticiones
+    weight: 1,                               // peso en la bolsa general
+    options: [
+      {
+        label:    'Texto del botón',
+        sub:      'Coste o requisito visible',
+        reqText:  'Requiere: ...',           // se muestra si no se cumple
+        cond:     (s) => ...,                // condición interna (opcional)
+        req:      (s) => ...,                // requisito interno (opcional)
+        cost:     120,                       // coste en rublos
+        fx:       { ... },                   // efectos al elegir
+        outcome:  'Qué ocurre después.'
+      }
+    ]
+  }
+
+Claves de fx admitidas (validadas por pruebas/simulacion.mjs):
+  health, intellect, loyalty, blat, morale   modificadores de atributos
+  rubles                                    suma/resta de rublos
+  rublesPct                                 porcentaje sobre los ahorros
+  item, removeItem                          añade/quita un bien de ITEMS
+  flag, flags                               marcas narrativas (booleanas)
+  risk                                      nivel de riesgo político
+  training, deals, rank, starRep, flatBoost progreso de metas concretas
+  waitlist                                  año de entrada en lista de vivienda
+  spouse, child, party                      cambios familiares/políticos
+  tier, job, housing, retired               trabajo y vivienda
+  army, study                               servicio militar y estudios
+  goal                                      elige la gran meta
+  death                                     muerte inmediata (usar con cuidado)
+
+Contenido por archivo:
+
+  01-infancia.js  · 12 eventos · 0–17 años
+    Hambre de 1933, escuela rural, maestro, pioneros, purgas vistas desde
+    niño, guerra, evacuación, trabajo adolescente, etc. Forman los atributos
+    y el carácter antes de elegir meta.
+
+  02-vida-adulta.js · 16 eventos · 18+ años
+    Vida cotidiana reutilizable con enfriamiento: primer empleo, vivienda,
+    matrimonio, hijos, estudios, mercado negro, salud, vacaciones, coche,
+    ascensos. Sostienen los años sin efeméride histórica.
+
+  03-stalin-deshielo.js · 18 eventos · 1922–1964
+    Colectivización, hambruna, purgas de 1937, Gran Guerra Patria, posguerra,
+    muerte de Stalin, amnistía, vivienda masiva, Sputnik, Gagarin, Novocherkassk
+    y la crisis de los misiles.
+
+  04-estancamiento-perestroika.js · 15 eventos · 1964–1991
+    Praga 1968, Afganistán, disidencia, Juegos Olímpicos, Chernóbil, glásnost,
+    cooperativas, escasez, nacionalismos y el golpe de agosto de 1991.
+
+  05-crisis-metas-colapso.js · 15 eventos
+    Crisis recurrentes (invierno, inspección de la KGB, enfermedad, dinero),
+    el evento «great_goal» que elige la meta a los 18, eventos de cada meta
+    (prefijo «g_») y el cierre de la URSS en 1991.
+
+--------------------------------------------------------------------------------
+ 4.5. src/motor/motor.js — reglas del juego
+--------------------------------------------------------------------------------
+Define STAT_KEYS (health, intellect, loyalty, blat, morale) y la clase Game.
+No toca el DOM. Métodos principales:
+
+  Game.create(cfg)
+    Crea el expediente: nombre, sexo, cohorte, origen, atributos, rublos,
+    vivienda, trabajo, meta vacía, registro. Llama a advance() para arrancar.
+
+  Game.revive(data)
+    Reconstruye una partida guardada y valida la versión del formato.
+
+  advance()
+    Avanza el tiempo. Si la fase es «result», limpia el resultado. Comprueba
+    el colapso, encola eventos del mismo año, incrementa año y edad, aplica
+    _yearly(), gestiona 1991 y elige el siguiente evento. Los menores de 18
+    pueden saltar varios años sin evento. Si no hay evento, genera un año
+    tranquilo (_quiet) o una pausa de infancia.
+
+  _yearly()
+    Economía anual (ingresos − gastos), fin de estudios, desgaste biológico
+    por edad, efectos pasivos de los bienes, recuperación de moral, caducidad
+    del blat, riesgo político que decae, comprobación de meta, resumen de
+    década, muerte por salud cero y mortalidad.
+
+  _pickEvent()
+    Prioridad: 1) efeméride exacta del año; 2) hito de edad; 3) fin de la
+    escuela; 4) gran meta pendiente; 5) crisis según el estado; 6) bolsa
+    general ponderada. Los eventos «g_» pesan cuatro veces más.
+
+  _crisis()
+    Elige crisis según salud (<34), lealtad/riesgo, dinero (<110 ₽) o
+    invierno (13% anual), con enfriamientos propios.
+
+  canPick(opt) / optionStatus(opt)
+    Deciden si una opción está disponible y por qué no lo está (requisito,
+    coste, condición). La interfaz usa optionStatus para deshabilitar botones.
+
+  choose(index)
+    Aplica coste y efectos, registra el evento, guarda el resultado y los
+    cambios (_deltas), actualiza la meta y comprueba la muerte por salud.
+
+  _applyFx(fx)
+    Aplica todos los efectos permitidos sobre el estado. Es el único punto
+    donde se modifican atributos, dinero, bienes, banderas, trabajo, etc.
+
+  _setGoal(id) / _checkGoal()
+    Eligen la meta y comprueban si se ha cumplido (progreso ≥ umbral y
+    gate superado). Al cumplirse aplican la recompensa una sola vez.
+
+  _end(cause, detail) / _endUSSR()
+    Cierran la partida por muerte o por disolución de la URSS. El final por
+    URSS calcula una edad proyectada y genera epílogo.
+
+  seals(), score(), rank(), endNote(), epilogue()
+    Calculan los sellos del expediente, la calificación /100, el rango, la
+    nota histórica y el epílogo. La puntuación combina atributos (30%),
+    meta (hasta 40), dinero, familia, edad, veteranía y bienes.
+
+  serialize() / logText()
+    Serializan el estado para guardar y generan el registro descargable .txt.
+
+--------------------------------------------------------------------------------
+ 4.6. src/interfaz/interfaz.js — presentación e interacción
+--------------------------------------------------------------------------------
+Módulo UI (IIFE) que solo lee el motor y pinta. Responsabilidades:
+
+  · Guardado: loadSave/save/clearSave en localStorage con las claves de
+    CONFIG. El guardado es automático tras cada decisión y al cerrar la página.
+  · Pantallas: show('intro' | 'game' | 'end') y reinicio.
+  · Cabecera: nombre, número de expediente, año, edad, era y línea temporal.
+  · Atributos y recursos: cinco barras, ahorros, ingresos/gastos, trabajo,
+    vivienda, familia, partido y bienes registrados.
+  · Meta: nombre, descripción, progreso /100 y condición pendiente.
+  · Evento: sello, año, título, texto, opciones (con coste/requisito) y
+    pantalla de resultado con los cambios (chips).
+  · Registro de vida: entradas de nacimiento, era, decisiones, crisis,
+    economía y muerte.
+  · Final: causa, calificación, rango, sellos, estadísticas, nota histórica,
+    epílogo y descarga del registro en .txt.
+  · Teclado: 1–4 elige opción; Enter/Espacio continúa; Escape cierra ayuda.
+  · Avisos (toast) y confirmaciones.
+  · Exporta window.__URSS__ = { UI, Game, GOALS, EVENTS, EVENT_LIST } para
+    depuración desde la consola del navegador.
+
+--------------------------------------------------------------------------------
+ 4.7. build.mjs y herramientas/
+--------------------------------------------------------------------------------
+build.mjs
+  Genera dist/urss-expediente.html:
+    1. Lee index.html.
+    2. Sustituye el <link> del CSS local por un <style> con su contenido.
+    3. Sustituye cada <script src="..."> local por un <script> en línea,
+       conservando el orden.
+    4. Deja intactos los CDN (Tailwind, fuentes).
+    5. Falla si queda alguna referencia local sin empaquetar.
+  Uso: node build.mjs
+
+herramientas/orden-carga.mjs
+  Utilidades compartidas por build y pruebas:
+    RAIZ, esLocal()
+    hojasLocales(html), scriptsLocales(html)
+    leerIndex()
+    cargarMotor(raiz, { conInterfaz })
+      Concatena los scripts del juego en un .mjs temporal y los importa en
+      Node. Por defecto excluye src/interfaz/ (necesita DOM). Devuelve
+      { Game, GOALS, EVENTS, EVENT_LIST, ORIGINS, CONFIG, ITEMS, eraFor,
+        incomeOf, expensesOf }.
+
+--------------------------------------------------------------------------------
+ 4.8. pruebas/
+--------------------------------------------------------------------------------
+Todas se ejecutan con Node y no necesitan instalar dependencias.
+
+pruebas/simulacion.mjs
+  · Valida que los 76 eventos tengan id único, opciones, desenlace y claves
+    de efecto conocidas.
+  · Comprueba que ningún evento quede sin una opción gratuita.
+  · Juega 1.200 partidas aleatorias y 1.200 con estrategia codiciosa,
+    revisando año máximo, atributos dentro de 0–100, rublos no negativos,
+    final alcanzado y metas.
+  Uso: node pruebas/simulacion.mjs
+
+pruebas/metas.mjs
+  · Juega 400 partidas por cada meta con una estrategia orientada a cumplirla.
+  · Resume elecciones, cumplimientos, progreso medio, edad media y muertes
+    prematuras. Sirve para detectar metas imposibles o demasiado fáciles.
+  Uso: node pruebas/metas.mjs
+
+pruebas/navegador.mjs
+  · Abre el juego por file:// en Chrome headless.
+  · Juega 6 partidas completas pulsando los botones reales.
+  · Falla si hay errores JS, si una pantalla se atasca o si no se llega al
+    final. Comprueba también la versión empaquetada.
+  Uso: node pruebas/navegador.mjs
+       node pruebas/navegador.mjs --dist
+  Requiere Google Chrome en /usr/bin/google-chrome (o variable CHROME).
+
+--------------------------------------------------------------------------------
+ 4.9. dist/
+--------------------------------------------------------------------------------
+urss-expediente.html
+  Copia autocontenida de index.html + CSS + JS. Es el archivo para compartir.
+  Se regenera con node build.mjs. No se edita a mano: los cambios se hacen en
+  src/ y se vuelve a compilar.
+
+================================================================================
+ 5. DÓNDE ESTÁ CADA TIPO DE CONTENIDO
+================================================================================
+
+  Qué quiere cambiar                          Dónde
+  ------------------------------------------  ---------------------------------
+  Añadir o reescribir un dilema               src/eventos/*.js
+  Cambiar el texto de una opción o desenlace  src/eventos/*.js (label/outcome)
+  Ajustar efectos de una decisión             src/eventos/*.js (fx)
+  Añadir una posesión comprable               src/nucleo/bienes.js (ITEMS)
+  Cambiar sueldos, gastos o vivienda          src/nucleo/economia.js
+  Cambiar las cuatro metas o su progreso      src/nucleo/metas.js (GOALS)
+  Cambiar atributos iniciales u orígenes      src/nucleo/origenes.js
+  Cambiar años, versión o precios base        src/nucleo/config.js
+  Cambiar los periodos y sus colores          src/nucleo/eras.js
+  Cambiar reglas, crisis, puntuación, finales src/motor/motor.js
+  Cambiar pantallas, botones o textos de UI   index.html + interfaz.js
+  Cambiar colores, tipografías o animaciones  src/estilos/estilos.css
+  Añadir un archivo nuevo de eventos          src/eventos/ + index.html
+  Cambiar el orden de carga                  index.html (solo ahí)
+
+================================================================================
+ 6. MODELO DE ESTADO
+================================================================================
+
+El estado es un objeto plano (state) que se guarda tal cual en localStorage.
+Campos principales:
+
+  v, seed, rand        versión y semilla del generador aleatorio
+  name, sex            identidad elegida en la pantalla de inicio
+  birthYear, year, age cohorte, año actual y edad
+  origin               clave de ORIGINS
+  era                  era actual (se actualiza sola)
+  stats                { health, intellect, loyalty, blat, morale } (0–100)
+  rubles               ahorros
+  tier, job            nivel laboral (0–7) y nombre del puesto
+  housing              kommunalka | room | khrushchyovka | apartment | house
+  spouse, children     situación familiar
+  party, retired       militancia y jubilación
+  items                array de claves de ITEMS
+  flags                marcas narrativas (risk, army, uni, dissident, etc.)
+  seen                 ids de eventos ya vividos (no repetibles)
+  cooldowns            último año en que se vio cada evento repetible
+  queue                eventos encolados para el mismo año
+  goal                 { id, completed, completedYear } o null
+  event, outcome       evento actual y resultado pendiente de continuar
+  phase                'event' | 'result' | 'ended'
+  ended                { type, cause, detail, year, age, projected } o null
+  log                  registro de vida [{ kind, year, text }]
+  meta                 contadores auxiliares
+
+Guardado:
+  localStorage['urss.expediente.v1']  partida en curso
+  localStorage['urss.mejor.v1']       mejor puntuación /100
+  La versión de CONFIG invalida guardados incompatibles.
+
+================================================================================
+ 7. CÓMO SE JUEGA
+================================================================================
+
+  1. Elige nombre, sexo registrado, cohorte (1928, 1938, 1948 o 1958) y origen.
+  2. La infancia avanza por hitos y eventos; las decisiones forman los stats.
+  3. A los 18 eliges una de las cuatro grandes metas.
+  4. Cada año hay un evento histórico, uno cotidiano o una crisis. Las opciones
+     pueden costar rublos, exigir atributos o estar condicionadas.
+  5. La economía anual suma sueldo y resta gastos; el blat caduca; la salud
+     cambia con la edad y la moral.
+  6. Si la salud llega a 0 o la mortalidad decide, la partida termina antes.
+  7. En 1991 la URSS se disuelve y el expediente se cierra con epílogo.
+  8. Al final se calcula la puntuación /100, el rango y los sellos.
+
+Controles:
+  1–4        elegir opción
+  Enter      continuar tras un resultado
+  Espacio    continuar
+  Escape     cerrar la ayuda
+
+================================================================================
+ 8. CÓMO MODIFICAR EL JUEGO
+================================================================================
+
+--------------------------------------------------------------------------------
+ 8.1. Añadir un evento
+--------------------------------------------------------------------------------
+1. Abre el archivo temático adecuado de src/eventos/.
+2. Añade un objeto dentro del array de addEvents([ ... ]). Ejemplo mínimo:
+
+   {
+     id: 'adult_teatro_1972',
+     title: 'Entradas para el Teatro Bolshói',
+     stamp: 'Taquilla · Moscú',
+     from: 1970, to: 1982,
+     minAge: 25,
+     weight: 2,
+     options: [
+       {
+         label: 'Comprar dos entradas por la vía oficial',
+         sub: '40 ₽',
+         cost: 40,
+         fx: { morale: 6, loyalty: 1 },
+         outcome: 'La fila fue larga, pero la función mereció la pena.'
+       },
+       {
+         label: 'Conseguirlas por contactos',
+         req: (s) => s.stats.blat >= 12,
+         reqText: 'Blat 12',
+         fx: { blat: -4, morale: 4 },
+         outcome: 'Una llamada bastó. Alguien te deberá un favor.'
+       },
+       {
+         label: 'Dejarlo pasar',
+         outcome: 'Otro año sin teatro. La cartelera seguirá ahí.'
+       }
+     ]
+   }
+
+3. Usa un id único en todo el juego (las pruebas fallan si se repite).
+4. Incluye siempre al menos una opción sin coste ni requisito.
+5. Si el archivo es nuevo, añade su <script src="..."> en index.html.
+6. Ejecuta node pruebas/simulacion.mjs y node build.mjs.
+
+--------------------------------------------------------------------------------
+ 8.2. Añadir un bien
+--------------------------------------------------------------------------------
+En src/nucleo/bienes.js añade una entrada a ITEMS:
+
+   record: { name: 'Tocadiscos', desc: 'Música en casa.', morale: 0.35 }
+
+Los efectos son pasivos y anuales. Puede recibirse con fx: { item: 'record' }
+o comprarse desde un evento con cost + fx.item.
+
+--------------------------------------------------------------------------------
+ 8.3. Cambiar una meta
+--------------------------------------------------------------------------------
+En src/nucleo/metas.js, cada meta tiene progress(s), gate(s), reward y done.
+· progress debe devolver 0–100; el jugador ve ese valor.
+· threshold es el mínimo interno para considerar el progreso completo.
+· gate devuelve null si se puede cerrar o un texto explicando qué falta.
+· reward se aplica una vez; done es el párrafo del cierre.
+Después ejecuta node pruebas/metas.mjs para comprobar que sigue siendo
+alcanzable en un número razonable de partidas.
+
+--------------------------------------------------------------------------------
+ 8.4. Ajustar economía o eras
+--------------------------------------------------------------------------------
+· Sueldos y gastos: src/nucleo/economia.js. Mantén la coherencia histórica:
+  los sueldos nominales son bajos y la escasez se representa con colas,
+  listas y mercado negro, no solo con precios altos.
+· Años de inicio/fin, versión de guardado y precios base:
+  src/nucleo/config.js.
+· Periodos y colores de la línea temporal: src/nucleo/eras.js.
+
+--------------------------------------------------------------------------------
+ 8.5. Cambiar textos de interfaz
+--------------------------------------------------------------------------------
+· Textos fijos de pantallas y ayuda: index.html.
+· Textos generados (etiquetas, avisos, final, descarga): interfaz.js.
+· Nombres y descripciones de metas, bienes y orígenes: src/nucleo/.
+· Voz narrativa de los eventos: src/eventos/.
+
+================================================================================
+ 9. COMPILACIÓN Y PRUEBAS
+================================================================================
+
+Requisitos para compilar/probar: Node.js 18 o superior. Para jugar, ninguno.
+
+  node build.mjs                  genera dist/urss-expediente.html
+  node pruebas/simulacion.mjs     2.400 partidas + validaciones (≈ 5 s)
+  node pruebas/metas.mjs          1.600 partidas, 400 por meta
+  node pruebas/navegador.mjs      6 partidas reales sobre index.html
+  node pruebas/navegador.mjs --dist  6 partidas sobre el archivo único
+
+Rutina recomendada antes de compartir:
+
+  node build.mjs
+  node pruebas/simulacion.mjs
+  node pruebas/metas.mjs
+  node pruebas/navegador.mjs
+  node pruebas/navegador.mjs --dist
+
+Resultados esperados (referencia, pueden variar por el azar):
+  · 76 eventos, todos con salida gratuita.
+  · Estrategia aleatoria: mayoría llega a 1991, mortalidad apreciable.
+  · Estrategia codiciosa: casi todas las partidas llegan a 1991.
+  · Metas: flat y star muy alcanzables; black y party exigen esfuerzo.
+  · Navegador: 6/6 partidas terminadas, 0 errores JS.
+
+================================================================================
+ 10. EQUILIBRIO REGISTRADO
+================================================================================
+
+Última ejecución de pruebas/metas.mjs (400 partidas por meta):
+
+  flat   elegida 400 | cumplidas 382/400 | progreso medio 98 | edad 27
+  star   elegida 100 | cumplidas  93/100 | progreso medio 99 | edad 38
+  black  elegida 400 | cumplidas 234/400 | progreso medio 86 | edad 40
+  party  elegida 400 | cumplidas 207/400 | progreso medio 73 | edad 35
+  muertes prematuras: 4–7 por cada 400 partidas
+
+Lectura:
+  · flat es la meta de entrada: fácil de cumplir si se ahorra y se usa la
+    lista de espera.
+  · star solo se ofrece a quien tiene suficiente intelecto; quien la elige
+    suele cumplirla, pero el camino es más largo.
+  · black y party son las metas exigentes: requieren red de contactos,
+    riesgo controlado o lealtad sostenida. Es intencionado.
+
+Si cambias eventos, metas o economía, vuelve a ejecutar metas.mjs y compara.
+No se busca que todas las metas sean igual de fáciles, sino que ninguna sea
+imposible y que las difíciles se sientan distintas.
+
+================================================================================
+ 11. CRITERIO HISTÓRICO Y NEUTRALIDAD
+================================================================================
+
+· Las fechas, instituciones, campañas y acontecimientos citados son reales
+  (colectivización, hambruna de 1932–33, purgas de 1937, Gran Guerra Patria,
+  deshielo, Sputnik, Chernóbil, Perestroika, disolución de 1991, etc.).
+· Los personajes, familias y dilemas concretos son ficción documentada: no
+  representan a personas reales.
+· El juego no adopta una consigna política. Muestra costes y logros del
+  sistema soviético según el periodo: represión y escasez junto a
+  alfabetización, sanidad, vivienda y movilidad social.
+· Las notas históricas del final cambian según la década de la muerte y
+  evitan presentar un único relato moral.
+· El objetivo es comprender una vida corriente bajo circunstancias extremas,
+  no emitir un veredicto sobre un país.
+
+================================================================================
+ 12. PROBLEMAS COMUNES
+================================================================================
+
+El juego no carga al abrir index.html
+  · Comprueba que la carpeta src/ está junto a index.html.
+  · Abre la consola del navegador (F12) y mira si falta algún archivo.
+  · No uses un servidor que reescriba rutas; las rutas son relativas.
+
+«No se pudo guardar»
+  · localStorage puede estar bloqueado en modo incógnito o por políticas del
+    navegador. El juego sigue funcionando sin guardado.
+
+No se ven las fuentes o algunos estilos
+  · Tailwind y Google Fonts vienen por CDN. Sin internet se pierden algunos
+    estilos, pero el CSS local mantiene el juego legible.
+
+El archivo dist/ no refleja los cambios
+  · Vuelve a ejecutar node build.mjs. dist/ no se edita a mano.
+
+Las pruebas de Node fallan con «document is not defined»
+  · cargarMotor() excluye src/interfaz/ por defecto. Si añades lógica de
+    navegador en un archivo de datos, sepárala: el motor debe ser headless.
+
+Chrome headless no encuentra el juego
+  · Define CHROME=/ruta/a/chrome si no está en /usr/bin/google-chrome.
+  · Las pruebas escriben un HTML temporal dentro del proyecto para que las
+    rutas relativas de src/ funcionen por file://.
+
+================================================================================
+ 13. CONVENIOS DE CÓDIGO
+================================================================================
+
+· Español sin acentos en nombres de archivos y carpetas (evita problemas de
+  codificación en distintas máquinas).
+· Un archivo = una responsabilidad. Si un archivo crece demasiado, se separa
+  por tema, no por tipo de función.
+· Cabecera de comentario al inicio de cada archivo explicando qué hace.
+· Scripts clásicos y variables globales: no mezclar con módulos ES.
+· El motor no toca el DOM; la interfaz no aplica reglas.
+· Todo efecto de un evento pasa por fx y por _applyFx(). Nada de mutar el
+  estado desde la interfaz.
+· Todo evento debe tener una opción sin coste ni requisito (salida libre).
+· Los ids de eventos son únicos y descriptivos (prefijo temático: child_,
+  adult_, stalin_, thaw_, stag_, per_, crisis_, g_).
+· Antes de compartir: build + las tres pruebas.
+
+================================================================================
+ FIN · URSS · Expediente vital
+================================================================================

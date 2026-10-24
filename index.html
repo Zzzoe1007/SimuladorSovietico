@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>URSS · Expediente vital</title>
+<meta name="description" content="Simulador narrativo de una vida en la Unión Soviética (1922-1991).">
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Special+Elite&display=swap" rel="stylesheet">
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        fontFamily: {
+          mono: ['"IBM Plex Mono"', '"Courier New"', 'Courier', 'monospace'],
+          display: ['"Special Elite"', '"Courier New"', 'Courier', 'monospace']
+        }
+      }
+    }
+  };
+</script>
+<link rel="stylesheet" href="src/estilos/estilos.css">
+</head>
+<body>
+<div class="watermark">СССР</div>
+
+<!-- ============================== PANTALLA DE INICIO ============================== -->
+<section id="screen-intro" class="screen">
+  <div class="mx-auto max-w-6xl px-4 py-8 md:py-14">
+    <div class="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--line)] pb-3">
+      <span class="label">Fondo documental № 947 · Sección de historia oral</span>
+      <span class="label">Unión de Repúblicas Socialistas Soviéticas · 1922–1991</span>
+    </div>
+
+    <div class="mt-8 grid grid-cols-1 lg:grid-cols-12 gap-8">
+      <div class="lg:col-span-6">
+        <div class="kicker">Simulador narrativo de una vida</div>
+        <h1 class="font-display mt-2 text-4xl md:text-6xl leading-[1.05] uppercase">Una vida<br>soviética</h1>
+        <div class="stamp stamp-red stamp-in mt-4">Expediente reservado</div>
+        <p class="mt-6 dim text-[15px] max-w-xl">
+          Naces, creces, trabajas y mueres dentro del mismo país. El Estado fija el precio del pan,
+          el turno de la vivienda y lo que puede decirse en voz alta. Tú decides cuánto estás dispuesto a pagar.
+        </p>
+        <p class="mt-3 muted text-[13px] max-w-xl">
+          Casi setenta años de historia: planes quinquenales, guerra, deshielo, estancamiento, perestroika.
+          Ninguna decisión es gratuita; ninguna estadística cuenta toda la verdad.
+        </p>
+
+        <div class="mt-8 grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div class="panel-soft p-3">
+            <div class="label">01 · La cuna</div>
+            <p class="mt-1 text-[12px] dim">Tu año de nacimiento y tu origen deciden el punto de partida. No la meta.</p>
+          </div>
+          <div class="panel-soft p-3">
+            <div class="label">02 · El siglo</div>
+            <p class="mt-1 text-[12px] dim">Cada año trae un dilema. Salud, lealtad, contactos y moral se mueven con él.</p>
+          </div>
+          <div class="panel-soft p-3">
+            <div class="label">03 · El archivo</div>
+            <p class="mt-1 text-[12px] dim">A los 18 eliges una gran meta. Tu expediente registrará si la cumpliste.</p>
+          </div>
+        </div>
+
+        <details class="mt-6 panel-soft p-3 text-[12px] dim">
+          <summary class="cursor-pointer label">Cómo se juega</summary>
+          <ul class="mt-3 space-y-1 list-disc pl-4">
+            <li>Avanza año a año. Cada tarjeta es un dilema con tres salidas; algunas exigen dinero, contactos o educación.</li>
+            <li><b>Salud</b>: si llega a 0, el expediente se cierra. <b>Moral</b> baja castiga la salud con los años.</li>
+            <li><b>Lealtad</b> abre puertas del Partido; demasiado baja atrae a la KGB. <b>Blat</b> son favores: se gastan y caducan.</li>
+            <li>Los bienes (nevera, dacha, Lada) dan pequeños beneficios cada año. Tu móvil y teclado funcionan: teclas 1–4.</li>
+          </ul>
+        </details>
+      </div>
+
+      <div class="lg:col-span-6">
+        <div class="panel p-5 md:p-6">
+          <div class="flex items-center justify-between">
+            <span class="label">Formulario de alta</span>
+            <span class="stamp stamp-olive">Modelo 1-A</span>
+          </div>
+          <div class="rule my-3"></div>
+
+          <form id="intro-form" autocomplete="off">
+            <label class="label block" for="name-input">Apellido y nombre</label>
+            <input id="name-input" class="input mt-1" maxlength="28" value="Iván Petrov" spellcheck="false">
+
+            <div class="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <span class="label">Sexo registrado</span>
+                <div class="mt-1 flex gap-2">
+                  <label class="pick-sm"><input type="radio" name="sex" value="hombre" checked><span>Hombre</span></label>
+                  <label class="pick-sm"><input type="radio" name="sex" value="mujer"><span>Mujer</span></label>
+                </div>
+                <p class="muted text-[10px] mt-1 leading-snug">Afecta al servicio militar y a algunas expectativas sociales de la época.</p>
+              </div>
+              <div>
+                <span class="label">Origen social</span>
+                <div class="mt-1 grid grid-cols-2 gap-1">
+                  <label class="pick-sm"><input type="radio" name="origin" value="obrero" checked><span>Obrero</span></label>
+                  <label class="pick-sm"><input type="radio" name="origin" value="campesino"><span>Campesino</span></label>
+                  <label class="pick-sm"><input type="radio" name="origin" value="intelectual"><span>Intelectual</span></label>
+                  <label class="pick-sm"><input type="radio" name="origin" value="nomenklatura"><span>Nomenklatura</span></label>
+                </div>
+                <p id="origin-hint" class="muted text-[10px] mt-1 leading-snug">Fábrica y barrio obrero: salud y sueldo modesto.</p>
+              </div>
+            </div>
+
+            <div class="mt-4">
+              <span class="label">Año de nacimiento</span>
+              <div class="mt-1 grid grid-cols-2 gap-2">
+                <label class="pick">
+                  <input type="radio" name="cohort" value="1928" checked>
+                  <span class="pick-body">
+                    <span class="pick-year">1928</span>
+                    <span class="pick-title">Generación del Plan</span>
+                    <span class="pick-desc">Infancia en la colectivización; adolescencia en la guerra.</span>
+                    <span class="pick-meta">63 años en 1991</span>
+                  </span>
+                </label>
+                <label class="pick">
+                  <input type="radio" name="cohort" value="1938">
+                  <span class="pick-body">
+                    <span class="pick-year">1938</span>
+                    <span class="pick-title">Niño de la guerra</span>
+                    <span class="pick-desc">Tu infancia es la evacuación; tu juventud, el Deshielo.</span>
+                    <span class="pick-meta">53 años en 1991</span>
+                  </span>
+                </label>
+                <label class="pick">
+                  <input type="radio" name="cohort" value="1948">
+                  <span class="pick-body">
+                    <span class="pick-year">1948</span>
+                    <span class="pick-title">Hijo de la posguerra</span>
+                    <span class="pick-desc">Maduras en el apogeo y luego en el estancamiento.</span>
+                    <span class="pick-meta">43 años en 1991</span>
+                  </span>
+                </label>
+                <label class="pick">
+                  <input type="radio" name="cohort" value="1958">
+                  <span class="pick-body">
+                    <span class="pick-year">1958</span>
+                    <span class="pick-title">Generación del Sputnik</span>
+                    <span class="pick-desc">Tu adultez empieza con la Perestroika y termina con el país.</span>
+                    <span class="pick-meta">33 años en 1991</span>
+                  </span>
+                </label>
+              </div>
+            </div>
+
+            <div class="mt-5 flex flex-col sm:flex-row gap-2">
+              <button type="submit" class="btn btn-primary flex-1">Abrir expediente</button>
+              <button type="button" id="btn-continue" class="btn flex-1" hidden>Continuar expediente</button>
+            </div>
+            <p id="intro-save-note" class="muted text-[10px] mt-2" hidden></p>
+            <p class="muted text-[10px] mt-3 leading-snug">
+              Ficción histórica documentada. El juego no glorifica ni condena: presenta dilemas con sus costes humanos.
+              Se guarda automáticamente en este navegador.
+            </p>
+          </form>
+        </div>
+      </div>
+    </div>
+    <div class="mt-10 border-t border-[var(--line)] pt-3 flex flex-wrap justify-between gap-2">
+      <span class="label">Archivo central · Expedientes personales</span>
+      <span class="label">Центральный архив · личные дела</span>
+    </div>
+  </div>
+</section>
+
+<!-- ============================== PANTALLA DE JUEGO ============================== -->
+<section id="screen-game" class="screen" hidden>
+  <div class="mx-auto max-w-[1440px] px-3 md:px-6 py-3 md:py-5">
+
+    <header class="panel px-4 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+      <div class="flex items-center gap-3 min-w-0">
+        <div class="stamp stamp-red text-[13px] px-2 py-1">☭</div>
+        <div class="min-w-0">
+          <div class="kicker">Expediente personal</div>
+          <div class="flex flex-wrap items-baseline gap-x-3">
+            <h1 id="hdr-name" class="font-display text-xl leading-none">Iván Petrov</h1>
+            <span id="case-no" class="muted text-[10px] tracking-widest">URSS-1928-0000</span>
+          </div>
+        </div>
+      </div>
+      <div class="flex w-full sm:w-auto items-center justify-between sm:justify-end gap-3 sm:gap-4 border-t sm:border-t-0 border-[var(--line-soft)] pt-2 sm:pt-0">
+        <div class="text-left sm:text-right">
+          <div class="label">Año</div>
+          <div id="hdr-year" class="font-display text-xl leading-none">1928</div>
+        </div>
+        <div class="text-left sm:text-right">
+          <div class="label">Edad</div>
+          <div id="hdr-age" class="font-display text-xl leading-none">0</div>
+        </div>
+        <div class="text-left sm:text-right flex-1 sm:flex-none">
+          <div class="label">Periodo</div>
+          <div id="hdr-era" class="text-[11px] tracking-[.16em] uppercase text-[var(--gold)]">Era de Stalin</div>
+        </div>
+        <button id="btn-help" class="btn btn-ghost px-2 py-1 text-[10px] shrink-0" title="Ayuda">?</button>
+      </div>
+    </header>
+
+    <div class="timeline mt-3" id="timeline">
+      <div class="marker" id="timeline-marker" style="left:0%"></div>
+    </div>
+
+    <div class="mt-5 grid grid-cols-1 lg:grid-cols-12 gap-4">
+      <!-- Columna izquierda: estado -->
+      <aside class="lg:col-span-3 order-2 lg:order-1 space-y-4">
+        <div class="panel p-4">
+          <div class="flex items-center justify-between">
+            <span class="label">Estado psicofísico</span>
+            <span class="stamp stamp-steel text-[8px]">Форма 2</span>
+          </div>
+          <div class="rule my-3"></div>
+          <div id="stats-body"></div>
+        </div>
+
+        <div class="panel p-4">
+          <div class="flex items-center justify-between">
+            <span class="label">Gran meta de vida</span>
+            <span id="goal-status-stamp" class="stamp stamp-gold text-[8px]" hidden>Cumplida</span>
+          </div>
+          <div class="rule my-3"></div>
+          <div id="goal-body"></div>
+        </div>
+
+        <div class="panel p-4">
+          <div class="flex items-center justify-between">
+            <span class="label">Recursos y bienes</span>
+            <span class="muted text-[10px]">₽</span>
+          </div>
+          <div class="rule my-3"></div>
+          <div id="resources-body"></div>
+        </div>
+      </aside>
+
+      <!-- Columna central: dilema -->
+      <main class="lg:col-span-6 order-1 lg:order-2">
+        <section class="panel p-5 md:p-7 relative" id="event-panel" style="min-height:360px" aria-live="polite">
+          <div class="flex items-start justify-between gap-3">
+            <span id="event-stamp" class="stamp stamp-red">Archivo</span>
+            <span id="event-year" class="muted text-[10px] tracking-widest">1928</span>
+          </div>
+          <h2 id="event-title" class="font-display text-2xl md:text-3xl mt-4 leading-tight">Nacimiento</h2>
+          <p id="event-text" class="mt-3 text-[14.5px] leading-relaxed dim"></p>
+          <div id="event-options" class="mt-6 space-y-2"></div>
+          <div id="event-result" class="mt-6" hidden></div>
+        </section>
+
+        <div class="mt-3 flex flex-wrap items-center justify-between gap-2">
+          <span class="scroll-hint hidden sm:inline">Teclas 1–4 para elegir · Enter para continuar</span>
+          <div class="flex gap-2">
+            <button id="btn-save" class="btn btn-ghost text-[10px] px-2 py-1">Guardar</button>
+            <button id="btn-abandon" class="btn btn-ghost text-[10px] px-2 py-1">Abandonar</button>
+          </div>
+        </div>
+      </main>
+
+      <!-- Columna derecha: registro -->
+      <aside class="lg:col-span-3 order-3">
+        <div class="panel p-4 h-full flex flex-col" style="min-height:360px">
+          <div class="flex items-center justify-between">
+            <span class="label">Registro de vida</span>
+            <span id="log-count" class="muted text-[10px]">0</span>
+          </div>
+          <div class="rule my-3"></div>
+          <div id="log-list" class="log-list flex-1 pr-1" style="max-height:62vh"></div>
+          <div class="mt-3 pt-2 border-t border-[var(--line-soft)] flex justify-between">
+            <span class="muted text-[9px] tracking-widest">ARCHIVO · EN VIVO</span>
+            <button id="btn-download-log" class="muted text-[9px] tracking-widest hover:text-[var(--gold)]">DESCARGAR</button>
+          </div>
+        </div>
+      </aside>
+    </div>
+  </div>
+</section>
+
+<!-- ============================== PANTALLA FINAL ============================== -->
+<section id="screen-end" class="screen" hidden>
+  <div class="mx-auto max-w-4xl px-4 py-10 md:py-16">
+    <div class="panel p-6 md:p-10 relative overflow-hidden">
+      <div class="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <div class="kicker">Fondo documental № 947</div>
+          <h1 class="font-display text-4xl md:text-5xl mt-1">Expediente cerrado</h1>
+        </div>
+        <div class="stamp stamp-red text-[13px] stamp-in" id="end-stamp">ARCHIVADO</div>
+      </div>
+      <div class="rule my-5"></div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div>
+          <div class="label">Titular</div>
+          <p id="end-name" class="font-display text-2xl">Iván Petrov</p>
+          <p id="end-years" class="muted text-[12px] mt-1">1928 – 1991 · 63 años</p>
+          <p id="end-cause" class="dim text-[13px] mt-3"></p>
+        </div>
+        <div>
+          <div class="label">Calificación del archivo</div>
+          <div class="flex items-baseline gap-2">
+            <span id="end-score" class="font-display text-4xl text-[var(--gold)]">0</span>
+            <span class="muted text-[11px]">/ 100</span>
+          </div>
+          <p id="end-rank" class="text-[12px] tracking-[.16em] uppercase text-[var(--gold)]"></p>
+          <p id="end-goal" class="dim text-[12px] mt-2"></p>
+        </div>
+      </div>
+
+      <div class="mt-6">
+        <div class="label">Sellos del expediente</div>
+        <div id="end-seals" class="mt-2 flex flex-wrap gap-2"></div>
+      </div>
+
+      <div class="mt-6 grid grid-cols-2 sm:grid-cols-5 gap-2" id="end-stats"></div>
+
+      <div class="mt-6 panel-soft p-4">
+        <div class="label">Nota histórica</div>
+        <p id="end-note" class="mt-1 text-[12px] dim leading-relaxed"></p>
+      </div>
+
+      <div class="mt-7 flex flex-wrap gap-2">
+        <button id="btn-restart" class="btn btn-primary">Nuevo expediente</button>
+        <button id="btn-download" class="btn">Descargar registro (.txt)</button>
+        <button id="btn-end-help" class="btn btn-ghost">Cómo se jugaba</button>
+      </div>
+    </div>
+    <p class="muted text-[10px] mt-4 text-center">Los hechos históricos citados son reales; las personas y sus dilemas son ficción documentada.</p>
+  </div>
+</section>
+
+<!-- ============================== AYUDA ============================== -->
+<div id="help-modal" class="modal-backdrop" hidden>
+  <div class="panel max-w-xl w-full p-6 max-h-[85vh] overflow-y-auto">
+    <div class="flex items-start justify-between">
+      <h2 class="font-display text-2xl">Manual del expediente</h2>
+      <button id="btn-close-help" class="btn btn-ghost px-2 py-1">✕</button>
+    </div>
+    <div class="rule my-4"></div>
+    <div class="text-[13px] dim space-y-3">
+      <p><b class="text-[var(--ink)]">Atributos.</b> Salud (0–100): si llega a 0, mueres. Intelecto: abre estudios y la vía científica. Lealtad: puertas del Partido, pero también sospecha si es demasiado baja. Blat: favores e influencia; caduca cada año. Moral: si es baja, erosiona la salud.</p>
+      <p><b class="text-[var(--ink)]">Dinero.</b> Cobras un sueldo anual y pagas manutención, vivienda e hijos. Los precios oficiales son bajos; lo que falta se consigue por listas de espera, contactos o mercado negro.</p>
+      <p><b class="text-[var(--ink)]">Gran meta.</b> A los 18 eliges una. Su progreso se calcula con tus ahorros, contactos, estudios y decisiones. Se cumple al llegar a 100 y superar la condición indicada.</p>
+      <p><b class="text-[var(--ink)]">Crisis.</b> La escasez invernal, las inspecciones de la KGB y las enfermedades aparecen según tu situación. Gastar rublos o blat suele ser mejor que resistir.</p>
+      <p><b class="text-[var(--ink)]">Final.</b> Si sigues vivo en 1991, el juego cierra con la disolución de la URSS y un epílogo. Si no, con tu muerte. Siempre quedan tus sellos y una nota histórica.</p>
+      <p class="text-[11px]"><b class="text-[var(--ink)]">Controles:</b> 1–4 elige opción; Enter/Space continúa; el botón Guardar escribe en este navegador.</p>
+    </div>
+    <div class="mt-5 flex justify-end"><button id="btn-close-help-2" class="btn">Cerrar</button></div>
+  </div>
+</div>
+
+<!-- Orden de carga: datos base -> eventos -> motor -> interfaz.
+     Si añades un archivo de eventos, añádelo aquí (y nada más). -->
+  <script src="src/nucleo/config.js"></script>
+  <script src="src/nucleo/utilidades.js"></script>
+  <script src="src/nucleo/eras.js"></script>
+  <script src="src/nucleo/bienes.js"></script>
+  <script src="src/nucleo/economia.js"></script>
+  <script src="src/nucleo/metas.js"></script>
+  <script src="src/nucleo/eventos.js"></script>
+  <script src="src/nucleo/origenes.js"></script>
+  <script src="src/eventos/01-infancia.js"></script>
+  <script src="src/eventos/02-vida-adulta.js"></script>
+  <script src="src/eventos/03-stalin-deshielo.js"></script>
+  <script src="src/eventos/04-estancamiento-perestroika.js"></script>
+  <script src="src/eventos/05-crisis-metas-colapso.js"></script>
+  <script src="src/motor/motor.js"></script>
+  <script src="src/interfaz/interfaz.js"></script>
+</body>
+</html>
